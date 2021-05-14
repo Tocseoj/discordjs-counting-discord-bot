@@ -8,25 +8,24 @@ client.on('ready', () => {
 });
 
 function validCount(messages) {
-  console.log("Messages", messages)
   let userCache = [];
   let prevNumber = 0;
   for (let i = 0; i < messages.length; i++) {
     const m = messages[i];
     
     if (userCache.includes(m.user)) {
-      console.log("Failed user validation")
+      console.log("Failed user validation", messages)
       return false;
     }
     userCache.push(m.user)
 
     if (m.content.match(/[0-9]+/g) === null) {
-      console.log("Failed regex validation")
+      console.log("Failed regex validation", messages)
       return false;
     }
     
     if (prevNumber > 0 && (+m.content) !== prevNumber - 1) {
-      console.log("Failed number validation")
+      console.log("Failed number validation", messages)
       return false;
     }
     prevNumber = (+m.content);
