@@ -35,12 +35,16 @@ function validCount(messages) {
 }
 
 client.on('message', async (msg) => {
+  if (msg.channel.id !== process.env.COUNTING_CHANNEL) {
+    return
+  }
+
   let collection = await msg.channel.messages.fetch({limit: 3})
   let messages = collection.map((m) => ({ user: m.author.id, content: m.content }))
   if (validCount(messages)) {
     // Success
     // msg.react('✅'); 
-    return;
+    return
   }
   // Fail
   msg.react('🚫');
