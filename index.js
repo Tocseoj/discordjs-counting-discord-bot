@@ -1,5 +1,5 @@
 require('dotenv').config()
-const db = require('better-sqlite3')('/home/ec2-user/db/counting.db');
+const Database = require('better-sqlite3')
 const { Client } = require('discord.js')
 const client = new Client({ ws: { intents: ['GUILDS', 'GUILD_MESSAGES'] } })
 
@@ -126,14 +126,13 @@ client.on('message', async (msg) => {
     msg.react('🚫');
     // msg.delete()
 
+    const db = new Database('/home/ec2-user/db/counting.db');
     let updatedCount = 0
     const user = db.prepare(`SELECT * FROM counters WHERE snowflake  = ?`).get(msg.author.id);
-    console.log("user", user)
     if (user) {
       updatedCount = user[FOUL_COLUMNS[foul]] + 1
     } else {
       db.prepare(`INSERT INTO counters(snowflake,username,discriminator,avatar) VALUES(?, ?, ?, ?)`).run(msg.author.id, msg.author.username, msg.author.discriminator, msg.author.avatar);
-      console.log("insert return")
       updatedCount = 1
     }
     db.prepare(`UPDATE counters SET ${FOUL_COLUMNS[foul]} = ? WHERE snowflake = ?`).run(updatedCount, msg.author.id);
