@@ -66,14 +66,14 @@ function sanityCheckAndFix(messages, messageToCheck) {
   return messages;
 }
 
-function validCount(messages) {
+function validCount(messages, skipUserValidation=false) {
   let foul = FOUL_TYPES['ALL_GOOD'];
   let userCache = [];
   let prevNumber = 0;
   for (let i = 0; i < messages.length; i++) {
     const m = messages[i];
     
-    if (userCache.includes(m.user)) {
+    if (userCache.includes(m.user) && !skipUserValidation) {
       console.log("Failed user validation", messages)
       foul = FOUL_TYPES['HASTY']
       break
@@ -116,7 +116,7 @@ client.on('message', async (msg) => {
     let messages = collection.map((m) => reduceMessage(m))
     messages = sanityCheckAndFix(messages, reduceMessage(msg))
     
-    let foul = validCount(messages) 
+    let foul = validCount(messages, true) 
     if (foul === FOUL_TYPES['ALL_GOOD']) {
       // Success
       // msg.react('✅'); 
