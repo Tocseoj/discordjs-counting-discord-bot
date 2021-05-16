@@ -132,8 +132,8 @@ client.on('message', async (msg) => {
     if (user) {
       updatedCount = user[FOUL_COLUMNS[foul]] + 1
     } else {
-      db.prepare(`INSERT INTO counters(snowflake,username,discriminator,avatar) VALUES(?)`).run(msg.author.id, msg.author.username, msg.author.discriminator, msg.author.avatar);
-      console.log("insert return", infoObj)
+      db.prepare(`INSERT INTO counters(snowflake,username,discriminator,avatar) VALUES(?, ?, ?, ?)`).run(msg.author.id, msg.author.username, msg.author.discriminator, msg.author.avatar);
+      console.log("insert return")
       updatedCount = 1
     }
     db.prepare(`UPDATE counters SET ${FOUL_COLUMNS[foul]} = ? WHERE snowflake = ?`).run(updatedCount, msg.author.id);
