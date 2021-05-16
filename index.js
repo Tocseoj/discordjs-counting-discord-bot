@@ -30,42 +30,7 @@ function reduceMessage(message) {
   }
 }
 
-// Returns the past 3 messages in descending order
-function sanityCheckAndFix(messages, messageToCheck) {
-  // Sanity Check(s)
-  let prevTimestamp = 0;
-  let needToSort = false;
-  let missingMessageToCheck = true;
-  for (let i = 0; i < messages.length; i++) {
-    const m = messages[i];
-
-    if (prevTimestamp > 0 && m.createdTimestamp > prevTimestamp) {
-      needToSort = true;
-    }
-    prevTimestamp = m.createdTimestamp
-
-    if (m.id === messageToCheck.id) {
-      missingMessageToCheck = false
-    }
-  }
-
-  // And Fix(es)
-  if (missingMessageToCheck) {
-    console.log("Before message is not inclusive!", messages, messageToCheck)
-    messages.push(messageToCheck)
-    needToSort = true
-  }
-  if (needToSort) {
-    console.log("Not in descending order!", messages, messageToCheck)
-    messages.sort((a, b) => b.createdTimestamp - a.createdTimestamp)
-  }
-  while (messages.length > 3) {
-    messages.pop()
-  }
-
-  return messages;
-}
-
+// Check if they followed the rules
 function validCount(messages, skipUserValidation=false) {
   let foul = FOUL_TYPES['ALL_GOOD'];
   let userCache = [];
@@ -98,46 +63,32 @@ function validCount(messages, skipUserValidation=false) {
 
 client.on('message', async (msg) => {
   if (msg.author.bot) return
-  if (msg.channel.id === process.env.COUNTING_CHANNEL) {
-    let collection = await msg.channel.messages.fetch({ limit: 3 })
-    let messages = collection.map((m) => reduceMessage(m))
-    
-    let foul = validCount(messages) 
-    if (foul === FOUL_TYPES['ALL_GOOD']) {
-      // Success
-      // msg.react('✅'); 
-      return
-    }
-    // Fail
-    msg.react('🚫');
-    // msg.delete()
-  } else if (msg.channel.id === "768974443434344458") {
-    let collection = await msg.channel.messages.fetch({ limit: 2, before: msg.id })
-    let messages = [reduceMessage(msg), ...collection.map((m) => reduceMessage(m))]
-    messages = sanityCheckAndFix(messages, reduceMessage(msg))
-    
-    let foul = validCount(messages, true) 
-    if (foul === FOUL_TYPES['ALL_GOOD']) {
-      // Success
-      // msg.react('✅'); 
-      return
-    }
-    // Fail
-    msg.react('🚫');
-    // msg.delete()
-
-    const db = new Database('/home/ec2-user/db/counting.db');
-    let updatedCount = 0
-    const user = db.prepare(`SELECT * FROM counters WHERE snowflake  = ?`).get(msg.author.id);
-    if (user) {
-      updatedCount = user[FOUL_COLUMNS[foul]] + 1
-    } else {
-      db.prepare(`INSERT INTO counters(snowflake,username,discriminator,avatar) VALUES(?, ?, ?, ?)`).run(msg.author.id, msg.author.username, msg.author.discriminator, msg.author.avatar);
-      updatedCount = 1
-    }
-    db.prepare(`UPDATE counters SET ${FOUL_COLUMNS[foul]} = ? WHERE snowflake = ?`).run(updatedCount, msg.author.id);
-    db.close();
+  if (msg.channel.id !== process.env.COUNTING_CHANNEL) return
+  
+  let collection = await msg.channel.messages.fetch({ limit: 2, before: msg.id })
+  let messages = [reduceMessage(msg), ...collection.map((m) => reduceMessage(m))]
+  
+  let foul = validCount(messages, true) 
+  if (foul === FOUL_TYPES['ALL_GOOD']) {
+    // Success
+    // msg.react('✅'); 
+    return
   }
+  // Fail
+  msg.react('🚫');
+  // msg.delete()
+
+  const db = new Database('/home/ec2-user/db/counting.db');
+  let updatedCount = 0
+  const user = db.prepare(`SELECT * FROM counters WHERE snowflake  = ?`).get(msg.author.id);
+  if (user) {
+    updatedCount = user[FOUL_COLUMNS[foul]] + 1
+  } else {
+    db.prepare(`INSERT INTO counters(snowflake,username,discriminator,avatar) VALUES(?, ?, ?, ?)`).run(msg.author.id, msg.author.username, msg.author.discriminator, msg.author.avatar);
+    updatedCount = 1
+  }
+  db.prepare(`UPDATE counters SET ${FOUL_COLUMNS[foul]} = ? WHERE snowflake = ?`).run(updatedCount, msg.author.id);
+  db.close();
 });
 
 client.login(process.env.COUNTING_BOT);
