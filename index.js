@@ -112,8 +112,8 @@ client.on('message', async (msg) => {
     msg.react('🚫');
     // msg.delete()
   } else if (msg.channel.id === "768974443434344458") {
-    let collection = await msg.channel.messages.fetch({ limit: 3, before: msg.id })
-    let messages = collection.map((m) => reduceMessage(m))
+    let collection = await msg.channel.messages.fetch({ limit: 2, before: msg.id })
+    let messages = [reduceMessage(msg), ...collection.map((m) => reduceMessage(m))]
     messages = sanityCheckAndFix(messages, reduceMessage(msg))
     
     let foul = validCount(messages, true) 
@@ -126,7 +126,7 @@ client.on('message', async (msg) => {
     msg.react('🚫');
     // msg.delete()
 
-    let db = new Database('~/db/counting.db');
+    let db = new Database('/home/ec2-user/db/counting.db');
     // insert one row into the langs table
     let updatedCount = 0
     let user = await db.get(`SELECT * FROM counters WHERE snowflake  = ?`, [msg.author.id])
