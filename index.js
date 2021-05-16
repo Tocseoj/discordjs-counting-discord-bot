@@ -23,6 +23,7 @@ client.on('ready', () => {
 // Just returns what I need
 function reduceMessage(message) {
   return {
+    id: message.id,
     user: message.author.id,
     content: message.content,
     createdTimestamp: message.createdTimestamp,
@@ -31,7 +32,7 @@ function reduceMessage(message) {
 
 // Returns the past 3 messages in descending order
 function sanityCheckAndFix(messages, messageToCheck) {
-  // Sanity Checks
+  // Sanity Check(s)
   let prevTimestamp = 0;
   let needToSort = false;
   let missingMessageToCheck = true;
@@ -41,14 +42,14 @@ function sanityCheckAndFix(messages, messageToCheck) {
     if (prevTimestamp > 0 && m.createdTimestamp < prevTimestamp) {
       needToSort = true;
     }
+    prevTimestamp = m.createdTimestamp
 
     if (m.id === messageToCheck.id) {
       missingMessageToCheck = false
     }
   }
 
-  // Fixes
-  // messages = [ 11, 10, 9, (8) ]
+  // And Fix(es)
   if (missingMessageToCheck) {
     console.log("Before message is not inclusive!", messages, messageToCheck)
     messages.push(messageToCheck)
