@@ -20,6 +20,15 @@ client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
 });
 
+// Just returns what I need
+function reduceMessage(message) {
+  return {
+    user: message.author.id,
+    content: message.content,
+    createdTimestamp: message.createdTimestamp,
+  }
+}
+
 // Returns the past 3 messages in descending order
 function sanityCheckAndFix(messages, messageToCheck) {
   // Sanity Checks
@@ -90,7 +99,7 @@ client.on('message', async (msg) => {
   if (msg.author.bot) return
   if (msg.channel.id === process.env.COUNTING_CHANNEL) {
     let collection = await msg.channel.messages.fetch({ limit: 3 })
-    let messages = collection.map((m) => ({ user: m.author.id, content: m.content }))
+    let messages = collection.map((m) => reduceMessage(m))
     
     let foul = validCount(messages) 
     if (foul === FOUL_TYPES['ALL_GOOD']) {
@@ -103,8 +112,8 @@ client.on('message', async (msg) => {
     // msg.delete()
   } else if (msg.channel.id === "768974443434344458") {
     let collection = await msg.channel.messages.fetch({ limit: 3, before: msg.id })
-    let messages = collection.map((m) => ({ user: m.author.id, content: m.content }))
-    messages = sanityCheckAndFix(messages, msg)
+    let messages = collection.map((m) => reduceMessage(m))
+    messages = sanityCheckAndFix(messages, reduceMessage(msg))
     
     let foul = validCount(messages) 
     if (foul === FOUL_TYPES['ALL_GOOD']) {
