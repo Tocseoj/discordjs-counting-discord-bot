@@ -75,7 +75,7 @@ client.on('message', async (msg) => {
     return
   }
   // Fail
-  // msg.react('🚫');
+  msg.react('🚫');
   msg.delete()
 
   const db = new Database('/home/ec2-user/db/counting.db');
