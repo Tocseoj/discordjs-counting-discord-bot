@@ -39,7 +39,7 @@ function sanityCheckAndFix(messages, messageToCheck) {
   for (let i = 0; i < messages.length; i++) {
     const m = messages[i];
 
-    if (prevTimestamp > 0 && m.createdTimestamp < prevTimestamp) {
+    if (prevTimestamp > 0 && m.createdTimestamp > prevTimestamp) {
       needToSort = true;
     }
     prevTimestamp = m.createdTimestamp
