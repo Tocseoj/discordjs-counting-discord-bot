@@ -1,5 +1,5 @@
 require('dotenv').config()
-const { Database } = require('sqlite3').verbose()
+const db = require('better-sqlite3')('/home/ec2-user/db/counting.db');
 const { Client } = require('discord.js')
 const client = new Client({ ws: { intents: ['GUILDS', 'GUILD_MESSAGES'] } })
 
@@ -126,17 +126,17 @@ client.on('message', async (msg) => {
     msg.react('🚫');
     // msg.delete()
 
-    let db = new Database('/home/ec2-user/db/counting.db');
-    // insert one row into the langs table
     let updatedCount = 0
-    let user = await db.get(`SELECT * FROM counters WHERE snowflake  = ?`, [msg.author.id])
+    const user = db.prepare(`SELECT * FROM counters WHERE snowflake  = ?`).get(msg.author.id);
+    console.log("user", user)
     if (user) {
       updatedCount = user[FOUL_COLUMNS[foul]] + 1
     } else {
-      await db.run(`INSERT INTO counters(snowflake,username,discriminator,avatar) VALUES(?)`, [msg.author.id, msg.author.username, msg.author.discriminator, msg.author.avatar]);
+      db.prepare(`INSERT INTO counters(snowflake,username,discriminator,avatar) VALUES(?)`).run(msg.author.id, msg.author.username, msg.author.discriminator, msg.author.avatar);
+      console.log("insert return", infoObj)
       updatedCount = 1
     }
-    await db.run(`UPDATE counters SET ? = ? WHERE snowflake = ?`, [FOUL_COLUMNS[foul], updatedCount, msg.author.id]);
+    db.prepare(`UPDATE counters SET ${FOUL_COLUMNS[foul]} = ? WHERE snowflake = ?`).run(updatedCount, msg.author.id);
     db.close();
   }
 });
