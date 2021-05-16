@@ -68,14 +68,14 @@ client.on('message', async (msg) => {
   let collection = await msg.channel.messages.fetch({ limit: 2, before: msg.id })
   let messages = [reduceMessage(msg), ...collection.map((m) => reduceMessage(m))]
   
-  let foul = validCount(messages, true) 
+  let foul = validCount(messages) 
   if (foul === FOUL_TYPES['ALL_GOOD']) {
     // Success
     // msg.react('✅'); 
     return
   }
   // Fail
-  msg.react('🚫');
+  // msg.react('🚫');
   msg.delete()
 
   const db = new Database('/home/ec2-user/db/counting.db');
