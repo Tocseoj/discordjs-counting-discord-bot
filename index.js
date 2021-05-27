@@ -25,10 +25,9 @@ function getWeekNumber(timestamp = null) {
   if (timestamp === null) {
     const now = new Date()  
     const utcMilllisecondsSinceEpoch = now.getTime() + (now.getTimezoneOffset() * 60 * 1000)  
-    const utcSecondsSinceEpoch = Math.round(utcMilllisecondsSinceEpoch / 1000)
-    timestamp = utcSecondsSinceEpoch
+    timestamp = utcMilllisecondsSinceEpoch
   }
-  return Math.floor((timestamp - START) / WEEK) + 1
+  return Math.floor((Math.round(timestamp / 1000) - START) / WEEK) + 1
 }
 
 // Just returns what I need
