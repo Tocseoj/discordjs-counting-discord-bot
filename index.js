@@ -1,6 +1,6 @@
 require('dotenv').config()
 const Database = require('better-sqlite3')
-const { Client } = require('discord.js')
+const { Client, Collection } = require('discord.js')
 const { uploadFile } = require('./upload.js')
 const { calculateBonus } = require('./bonus.js')
 
@@ -33,27 +33,37 @@ function getWeekNumber(timestamp = null) {
   return Math.floor((Math.round(timestamp / 1000) - START) / WEEK) + 1
 }
 
+function cleanMessagesLog(messages) {
+  return JSON.stringify(messages.map((m) => ({
+    content: m.content,
+    user: m.member.displayName,
+    timestamp: m.createdTimestamp,
+  }))).replace(/"([^"]+)"/g, '$1')
+}
+
 // Check if they followed the rules
 function validCount(messages, skipUserValidation=false) {
   let foul = FOUL_TYPES['ALL_GOOD'];
   let userCache = [];
   let prevNumber = 0;
-  for (const message of messages) {
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i];
+
     if (userCache.includes(message.author.id) && !skipUserValidation) {
-      console.log("Failed user validation", messages)
+      console.log("Failed user validation", cleanMessagesLog(messages))
       foul = FOUL_TYPES['HASTY']
       break
     }
     userCache.push(message.author.id)
 
     if (message.content.match(/[0-9]+/g) === null) {
-      console.log("Failed regex validation", messages)
+      console.log("Failed regex validation", cleanMessagesLog(messages))
       foul = FOUL_TYPES['BAD_NUMBER']
       break
     }
     
     if (prevNumber > 0 && (+message.content) !== prevNumber - 1) {
-      console.log("Failed number validation", messages)
+      console.log("Failed number validation", cleanMessagesLog(messages))
       foul = FOUL_TYPES['BAD_COUNT']
       break
     }
@@ -69,7 +79,7 @@ function addError(message, foul) {
   if (user) {
     updatedCount = user[FOUL_COLUMNS[foul]] + 1
   } else {
-    db.prepare(`INSERT INTO counters(snowflake,username,discriminator,avatar) VALUES(?,?,?,?) ON CONFLICT(snowflake) DO UPDATE SET username=excluded.username,discriminator=excluded.discriminator,avatar=excluded.avatar`).run(message.author.id, message.author.username, message.author.discriminator, message.author.avatar);
+    db.prepare(`INSERT INTO counters(snowflake,username,discriminator,avatar,nickname) VALUES(?,?,?,?,?) ON CONFLICT(snowflake) DO UPDATE SET username=excluded.username,discriminator=excluded.discriminator,avatar=excluded.avatar,nickname=excluded.nickname`).run(message.author.id, message.author.username, message.author.discriminator, message.author.avatar, message.member.displayName);
     updatedCount = 1
   }
   db.prepare(`UPDATE counters SET ${FOUL_COLUMNS[foul]} = ? WHERE snowflake = ?`).run(updatedCount, message.author.id);
@@ -114,7 +124,7 @@ client.on('message', async (message) => {
   if (message.channel.id !== process.env.COUNTING_CHANNEL) return
   
   const collection = await message.channel.messages.fetch({ limit: 2, before: message.id })
-  const messages = [message].concat(collection)
+  const messages = [message, ...collection.array()]
   
   const foul = validCount(messages) 
   if (foul === FOUL_TYPES['ALL_GOOD']) {
