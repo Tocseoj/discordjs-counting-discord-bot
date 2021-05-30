@@ -91,9 +91,15 @@ async function weekCounts(message) {
     // Start building up the weekcounts
     // let collection = await message.channel.messages.fetch({ limit: 2, before: message.id })
     try {
-      uploadFile(DB_PATH);
+      uploadFile(DB_PATH)
     } catch (e) {
-      console.log("Failed to upload file", e)
+      console.log("uploadFile failed", e)
+      await setTimeout(function () {
+        try {
+          uploadFile(DB_PATH)
+          console.log("uploadFile retry succeeded")
+        } catch (e) {}
+      }, 1000);
     }
   }
 }
@@ -127,7 +133,10 @@ client.on('message', async (message) => {
     } catch (e) {
       console.log("addError failed", e)
       await setTimeout(function () {
-        addError(message, foul)
+        try {
+          addError(message, foul)
+          console.log("addError retry succeeded")
+        } catch (e) {}
       }, 1000);
     }
   }
@@ -141,7 +150,10 @@ client.on('message', async (message) => {
     } catch (e) {
       console.log("weekCounts failed", e)
       await setTimeout(function () {
-        weekCounts(message)
+        try {
+          weekCounts(message)
+          console.log("weekCounts retry succeeded")
+        } catch (e) {}
       }, 1000);
     }
   }
