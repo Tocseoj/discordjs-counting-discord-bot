@@ -1,6 +1,8 @@
 require('dotenv').config()
 const Database = require('better-sqlite3')
 const { Client } = require('discord.js')
+const { uploadFile } = require('./upload.js')
+
 const client = new Client({ ws: { intents: ['GUILDS', 'GUILD_MESSAGES'] } })
 
 const FOUL_TYPES =  { 
@@ -78,7 +80,7 @@ function addError(message, foul) {
   if (user) {
     updatedCount = user[FOUL_COLUMNS[foul]] + 1
   } else {
-    db.prepare(`INSERT INTO counters(snowflake,username,discriminator,avatar) VALUES(?, ?, ?, ?)`).run(message.author.id, message.author.username, message.author.discriminator, message.author.avatar);
+    db.prepare(`INSERT INTO counters(snowflake,username,discriminator,avatar) VALUES(?,?,?,?) ON CONFLICT(snowflake) DO UPDATE SET username=excluded.username,discriminator=excluded.discriminator,avatar=excluded.avatar`).run(message.author.id, message.author.username, message.author.discriminator, message.author.avatar);
     updatedCount = 1
   }
   db.prepare(`UPDATE counters SET ${FOUL_COLUMNS[foul]} = ? WHERE snowflake = ?`).run(updatedCount, message.author.id);
@@ -86,17 +88,25 @@ function addError(message, foul) {
 }
 
 async function weekCounts(message) {
-  const db = new Database(DB_PATH);
-  const recent = db.prepare(`SELECT MAX(week) as last_week FROM weekcounts`).get();
+  let db = new Database(DB_PATH);
+  const recent = db.prepare(`SELECT MAX(week) as last_week FROM weekmessages`).get();
+  db.close();
   const current_week = getWeekNumber(message.createdTimestamp)
   if (recent.last_week != current_week) {
     lastCheckedWeek = current_week
     console.log("First message of a new week.", current_week)
-    db.prepare(`INSERT INTO weekcounts(snowflake,week,total_count,message_id) VALUES(?, ?, ?, ?)`).run("0", current_week, 0, message.id);
-    // Should probably close before calling an ayncronous method
+    // Currently just storing one as reference
+    db = new Database(DB_PATH);
+    db.prepare(`INSERT INTO weekmessages(message_id,snowflake,week) VALUES(?, ?, ?) ON CONFLICT(message_id) DO UPDATE SET snowflake=excluded.snowflake,week=excluded.week`).run(message.id, message.author.id, current_week);
+    db.close();
+    // Start building up the weekcounts
     // let collection = await message.channel.messages.fetch({ limit: 2, before: message.id })
+    try {
+      uploadFile(DB_PATH);
+    } catch (e) {
+      console.log("Failed to upload file", e)
+    }
   }
-  db.close();
 }
 
 // DiscordJS Coe
