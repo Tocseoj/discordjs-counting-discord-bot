@@ -2,6 +2,7 @@
 Archive.zip
 *.pem
 *.db
+bonus.js
 
 # Logs
 logs

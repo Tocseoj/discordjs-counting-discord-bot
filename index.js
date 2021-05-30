@@ -2,6 +2,7 @@ require('dotenv').config()
 const Database = require('better-sqlite3')
 const { Client } = require('discord.js')
 const { uploadFile } = require('./upload.js')
+const { calculateBonus } = require('./bonus.js')
 
 const client = new Client({ ws: { intents: ['GUILDS', 'GUILD_MESSAGES'] } })
 
@@ -32,43 +33,31 @@ function getWeekNumber(timestamp = null) {
   return Math.floor((Math.round(timestamp / 1000) - START) / WEEK) + 1
 }
 
-// Just returns what I need
-function reduceMessage(message) {
-  return {
-    id: message.id,
-    user: message.author.id,
-    content: message.content,
-    createdTimestamp: message.createdTimestamp,
-  }
-}
-
 // Check if they followed the rules
 function validCount(messages, skipUserValidation=false) {
   let foul = FOUL_TYPES['ALL_GOOD'];
   let userCache = [];
   let prevNumber = 0;
-  for (let i = 0; i < messages.length; i++) {
-    const m = messages[i];
-    
-    if (userCache.includes(m.user) && !skipUserValidation) {
+  for (const message of messages) {
+    if (userCache.includes(message.author.id) && !skipUserValidation) {
       console.log("Failed user validation", messages)
       foul = FOUL_TYPES['HASTY']
       break
     }
-    userCache.push(m.user)
+    userCache.push(message.author.id)
 
-    if (m.content.match(/[0-9]+/g) === null) {
+    if (message.content.match(/[0-9]+/g) === null) {
       console.log("Failed regex validation", messages)
       foul = FOUL_TYPES['BAD_NUMBER']
       break
     }
     
-    if (prevNumber > 0 && (+m.content) !== prevNumber - 1) {
+    if (prevNumber > 0 && (+message.content) !== prevNumber - 1) {
       console.log("Failed number validation", messages)
       foul = FOUL_TYPES['BAD_COUNT']
       break
     }
-    prevNumber = (+m.content);
+    prevNumber = (+message.content);
   }
   return foul;
 }
@@ -88,10 +77,10 @@ function addError(message, foul) {
 }
 
 async function weekCounts(message) {
+  const current_week = getWeekNumber(message.createdTimestamp)
   let db = new Database(DB_PATH);
   const recent = db.prepare(`SELECT MAX(week) as last_week FROM weekmessages`).get();
   db.close();
-  const current_week = getWeekNumber(message.createdTimestamp)
   if (recent.last_week != current_week) {
     lastCheckedWeek = current_week
     console.log("First message of a new week.", current_week)
@@ -114,43 +103,45 @@ client.on('ready', () => {
   console.log(`Logged in as ${client.user.tag}!`);
 });
 
-client.on('message', async (msg) => {
-  if (msg.author.bot) return
-  if (msg.channel.id !== process.env.COUNTING_CHANNEL) return
+client.on('message', async (message) => {
+  if (message.author.bot) return
+  if (message.channel.id !== process.env.COUNTING_CHANNEL) return
   
-  let collection = await msg.channel.messages.fetch({ limit: 2, before: msg.id })
-  let messages = [reduceMessage(msg), ...collection.map((m) => reduceMessage(m))]
+  const collection = await message.channel.messages.fetch({ limit: 2, before: message.id })
+  const messages = [message].concat(collection)
   
-  let foul = validCount(messages) 
+  const foul = validCount(messages) 
   if (foul === FOUL_TYPES['ALL_GOOD']) {
     // Success
-    // msg.react('✅'); 
+    // message.react('✅'); 
+    const bonus = calculateBonus(message)
+    if (bonus) message.react('💎');
   } else {
     // Fail
-    // msg.react('🚫');
-    msg.delete()
+    // message.react('🚫');
+    message.delete()
   
     // Track mistakes
     try {
-      addError(msg, foul)
+      addError(message, foul)
     } catch (e) {
       console.log("addError failed", e)
       await setTimeout(function () {
-        addError(msg, foul)
+        addError(message, foul)
       }, 1000);
     }
   }
 
   // This if statement can help reduce db accesses, 
   // but isn't perfect since resets when the process restarts
-  if (getWeekNumber(msg.createdTimestamp) > lastCheckedWeek) {
+  if (getWeekNumber(message.createdTimestamp) > lastCheckedWeek) {
     // Get week counts once a week
     try {
-      weekCounts(msg)
+      weekCounts(message)
     } catch (e) {
       console.log("weekCounts failed", e)
       await setTimeout(function () {
-        weekCounts(msg)
+        weekCounts(message)
       }, 1000);
     }
   }
