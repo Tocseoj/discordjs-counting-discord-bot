@@ -56,7 +56,7 @@ function validCount(messages, skipUserValidation=false) {
     }
     userCache.push(message.author.id)
 
-    if (message.content.match(/[0-9]+/g) === null) {
+    if (message.content.match(/^[0-9]+$/g) === null) {
       console.log("Failed regex validation", cleanMessagesLog(messages))
       foul = FOUL_TYPES['BAD_NUMBER']
       break
